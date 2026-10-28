@@ -1,0 +1,7 @@
+/dist
+/coverage
+/.nx
+/.angular
+pnpm-lock.yaml
+openspec/changes/archive
+apps/api/src/generated

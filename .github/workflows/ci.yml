@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NX_DAEMON: 'false'
+  NX_NO_CLOUD: 'true'
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Sets NX_BASE / NX_HEAD so `nx affected` compares against the right commit.
+      - uses: nrwl/nx-set-shas@v4
+
+      - run: pnpm exec prettier --check .
+
+      - name: Affected targets (pull requests)
+        if: github.event_name == 'pull_request'
+        run: pnpm exec nx affected -t lint typecheck test build
+
+      - name: All targets (main)
+        if: github.event_name == 'push'
+        run: pnpm exec nx run-many -t lint typecheck test build
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    # Reported but not blocking until the dependency tree settles.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm audit --prod --audit-level high

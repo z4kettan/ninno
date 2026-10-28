@@ -1,0 +1,11 @@
+allowBuilds:
+  '@parcel/watcher': true
+  nx: true
+  unrs-resolver: true
+  esbuild: false
+  lmdb: false
+  msgpackr-extract: false
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  '@prisma/engines': true
+  prisma: true

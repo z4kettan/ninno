@@ -1,0 +1,85 @@
+# Local development infrastructure. Start with `pnpm infra:up`.
+name: ninno
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ninno
+      POSTGRES_PASSWORD: ninno
+      POSTGRES_DB: ninno
+      TZ: Asia/Kolkata
+    ports:
+      # 5433 on the host: a native Windows PostgreSQL often owns 5432.
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ninno -d ninno']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # S3-compatible object storage for ID documents (dev only; prod uses AWS S3 ap-south-1 or R2).
+  # RustFS replaces MinIO, whose images are no longer published on Docker Hub or Quay.
+  s3:
+    image: rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: ninno
+      RUSTFS_SECRET_KEY: ninno-dev-secret
+      RUSTFS_ADDRESS: ':9000'
+      RUSTFS_CONSOLE_ENABLE: 'true'
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - s3-data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:9000/health']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Creates the private bucket once storage is healthy. Buckets are private by default.
+  s3-init:
+    image: rustfs/rustfs:1.0.4
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - >
+        curl -sS -o /dev/null -w 'create bucket: HTTP %{http_code}\n'
+        -X PUT --aws-sigv4 'aws:amz:ap-south-1:s3' --user 'ninno:ninno-dev-secret'
+        http://s3:9000/ninno-private
+    restart: 'no'
+
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-data:
+  redis-data:
+  s3-data:

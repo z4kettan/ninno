@@ -1,0 +1,497 @@
+// Ninno data model. See docs/hostel-app-build-guide.md §4 and
+// openspec/specs/{tenancy,hostel-inventory} for the rules it enforces.
+//
+// Conventions:
+// - Every business row carries organization_id (and hostel_id where it lives in a hostel).
+//   Children reference parents through composite keys so rows can never cross tenants.
+// - Money is BigInt paise. Calendar dates are @db.Date; instants are timestamptz.
+// - Constraints Prisma cannot express (CHECKs, partial/NULLS NOT DISTINCT indexes,
+//   optional composite FKs, views) live in the migration SQL.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../apps/api/src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GenderPolicy {
+  MALE
+  FEMALE
+  CO_LIVING
+}
+
+enum BillingMode {
+  CHECKIN_ANNIVERSARY
+  FIXED_DAY
+}
+
+enum LateFeeType {
+  NONE
+  FLAT
+  PER_DAY
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  DORM
+}
+
+enum BedStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+  RESIDENT
+}
+
+enum ResidentStatus {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  MOVED_OUT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum OccupationType {
+  STUDENT
+  WORKING
+  OTHER
+}
+
+enum IdDocumentType {
+  AADHAAR
+  VOTER_ID
+  PASSPORT
+  DRIVING_LICENCE
+  PAN
+  OTHER
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BillingCycle {
+  MONTHLY
+  WEEKLY
+  QUARTERLY
+}
+
+enum InvoiceStatus {
+  UPCOMING
+  DUE
+  OVERDUE
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+}
+
+/// How the resident paid the hostel directly. v1 has no payment gateway.
+enum PaymentMethod {
+  UPI_DIRECT
+  CASH
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  RECORDED
+  VOIDED
+}
+
+/// The SaaS tenant: the business that runs one or more hostels.
+model Organization {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  name      String
+  slug      String    @unique
+  gstin     String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  hostels           Hostel[]
+  rooms             Room[]
+  beds              Bed[]
+  memberships       Membership[]
+  onboardingLinks   OnboardingLink[]
+  residents         Resident[]
+  identityDocuments IdentityDocument[]
+  rentPlans         RentPlan[]
+  invoices          Invoice[]
+  payments          Payment[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+model Hostel {
+  id               String       @id @default(uuid(7)) @db.Uuid
+  organizationId   String       @map("organization_id") @db.Uuid
+  name             String
+  slug             String
+  addressLine1     String       @map("address_line1")
+  addressLine2     String?      @map("address_line2")
+  city             String
+  state            String
+  pincode          String       @db.VarChar(6)
+  latitude         Decimal?     @db.Decimal(9, 6)
+  longitude        Decimal?     @db.Decimal(9, 6)
+  phone            String       @db.VarChar(13)
+  genderPolicy     GenderPolicy @map("gender_policy")
+  /// e.g. ["wifi", "food", "laundry"]
+  amenities        Json         @default("[]")
+  isListedPublicly Boolean      @default(false) @map("is_listed_publicly")
+  /// The hostel's own UPI id, shown to residents as "how to pay". No gateway in v1.
+  upiVpa           String?      @map("upi_vpa")
+  rulesText        String       @default("") @map("rules_text")
+
+  // Billing settings (build guide §7).
+  billingMode                 BillingMode @default(CHECKIN_ANNIVERSARY) @map("billing_mode")
+  fixedDueDay                 Int?        @map("fixed_due_day") @db.SmallInt
+  graceDays                   Int         @default(5) @map("grace_days") @db.SmallInt
+  invoiceLeadDays             Int         @default(7) @map("invoice_lead_days") @db.SmallInt
+  lateFeeType                 LateFeeType @default(NONE) @map("late_fee_type")
+  lateFeePaise                BigInt      @default(0) @map("late_fee_paise")
+  lateFeeCapPaise             BigInt?     @map("late_fee_cap_paise")
+  allowPartialPayments        Boolean     @default(false) @map("allow_partial_payments")
+  defaultSecurityDepositPaise BigInt      @default(0) @map("default_security_deposit_paise")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  rooms           Room[]
+  memberships     Membership[]
+  onboardingLinks OnboardingLink[]
+  residents       Resident[]
+
+  @@unique([organizationId, slug])
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@map("hostels")
+}
+
+model Room {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  hostelId         String   @map("hostel_id") @db.Uuid
+  number           String
+  floor            Int      @db.SmallInt
+  type             RoomType
+  capacity         Int      @db.SmallInt
+  /// Default rent per bed; each resident's RentPlan holds what they actually pay.
+  monthlyRentPaise BigInt   @map("monthly_rent_paise")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  hostel       Hostel       @relation(fields: [hostelId, organizationId], references: [id, organizationId])
+  beds         Bed[]
+
+  @@unique([hostelId, number])
+  @@unique([id, hostelId, organizationId])
+  @@index([organizationId])
+  @@map("rooms")
+}
+
+model Bed {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  hostelId       String    @map("hostel_id") @db.Uuid
+  roomId         String    @map("room_id") @db.Uuid
+  label          String
+  status         BedStatus @default(VACANT)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  room         Room         @relation(fields: [roomId, hostelId, organizationId], references: [id, hostelId, organizationId])
+  residents    Resident[]
+
+  @@unique([roomId, label])
+  @@unique([id, hostelId, organizationId])
+  @@index([organizationId])
+  @@index([hostelId, status])
+  @@map("beds")
+}
+
+/// A person. Identified by phone; everyone logs in with phone + OTP, so there is no password.
+model User {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  /// E.164, e.g. +919876543210
+  phone       String    @unique @db.VarChar(13)
+  name        String
+  email       String?
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  memberships       Membership[]
+  residents         Resident[]         @relation("ResidentUser")
+  approvedResidents Resident[]         @relation("ResidentApprovedBy")
+  createdLinks      OnboardingLink[]
+  verifiedDocuments IdentityDocument[]
+  createdRentPlans  RentPlan[]
+  recordedPayments  Payment[]          @relation("PaymentRecordedBy")
+  voidedPayments    Payment[]          @relation("PaymentVoidedBy")
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+/// Grants a user one role in an organisation, optionally limited to one hostel.
+/// Uniqueness of (user, organization, hostel) treats NULL hostel as a value: see migration SQL.
+model Membership {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  /// NULL = organisation-wide. The (hostel_id, organization_id) FK is in the migration SQL.
+  hostelId       String?   @map("hostel_id") @db.Uuid
+  role           Role
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  hostel       Hostel?      @relation(fields: [hostelId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([hostelId])
+  @@map("memberships")
+}
+
+/// The link a hostel's QR code encodes: https://<app>/join/<token>
+model OnboardingLink {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  hostelId       String    @map("hostel_id") @db.Uuid
+  token          String    @unique
+  isActive       Boolean   @default(true) @map("is_active")
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(3)
+  maxUses        Int?      @map("max_uses")
+  useCount       Int       @default(0) @map("use_count")
+  createdById    String?   @map("created_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  hostel       Hostel       @relation(fields: [hostelId, organizationId], references: [id, organizationId])
+  createdBy    User?        @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([hostelId, isActive])
+  @@map("onboarding_links")
+}
+
+model Resident {
+  id                       String         @id @default(uuid(7)) @db.Uuid
+  organizationId           String         @map("organization_id") @db.Uuid
+  hostelId                 String         @map("hostel_id") @db.Uuid
+  userId                   String         @map("user_id") @db.Uuid
+  status                   ResidentStatus @default(PENDING_REVIEW)
+  fullName                 String         @map("full_name")
+  dob                      DateTime       @db.Date
+  gender                   Gender
+  phone                    String         @db.VarChar(13)
+  altPhone                 String?        @map("alt_phone") @db.VarChar(13)
+  email                    String?
+  /// { line1, line2?, city, state, pincode }
+  permanentAddress         Json           @map("permanent_address")
+  occupationType           OccupationType @map("occupation_type")
+  institutionOrCompany     String?        @map("institution_or_company")
+  emergencyContactName     String         @map("emergency_contact_name")
+  emergencyContactPhone    String         @map("emergency_contact_phone") @db.VarChar(13)
+  emergencyContactRelation String         @map("emergency_contact_relation")
+  photoKey                 String?        @map("photo_key")
+  consentAcceptedAt        DateTime       @map("consent_accepted_at") @db.Timestamptz(3)
+  consentVersion           String         @map("consent_version")
+  checkInDate              DateTime?      @map("check_in_date") @db.Date
+  checkOutDate             DateTime?      @map("check_out_date") @db.Date
+  /// The (bed_id, hostel_id, organization_id) FK and the one-ACTIVE-per-bed index are in the migration SQL.
+  bedId                    String?        @map("bed_id") @db.Uuid
+  approvedById             String?        @map("approved_by_id") @db.Uuid
+  approvedAt               DateTime?      @map("approved_at") @db.Timestamptz(3)
+  rejectionReason          String?        @map("rejection_reason")
+  createdAt                DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                DateTime?      @map("deleted_at") @db.Timestamptz(3)
+
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  hostel            Hostel             @relation(fields: [hostelId, organizationId], references: [id, organizationId])
+  user              User               @relation("ResidentUser", fields: [userId], references: [id])
+  bed               Bed?               @relation(fields: [bedId], references: [id])
+  approvedBy        User?              @relation("ResidentApprovedBy", fields: [approvedById], references: [id])
+  identityDocuments IdentityDocument[]
+  rentPlans         RentPlan[]
+  invoices          Invoice[]
+
+  @@unique([id, organizationId])
+  @@unique([id, hostelId, organizationId])
+  @@index([organizationId])
+  @@index([hostelId, status])
+  @@index([userId])
+  @@index([bedId])
+  @@map("residents")
+}
+
+model IdentityDocument {
+  id                 String             @id @default(uuid(7)) @db.Uuid
+  organizationId     String             @map("organization_id") @db.Uuid
+  residentId         String             @map("resident_id") @db.Uuid
+  type               IdDocumentType
+  /// Only the masked form is kept, e.g. XXXX-XXXX-1234 for Aadhaar.
+  numberMasked       String             @map("number_masked")
+  /// App-level encrypted full number, only if there is a real business need. Never plain text.
+  numberEncrypted    Bytes?             @map("number_encrypted")
+  frontKey           String             @map("front_key")
+  backKey            String?            @map("back_key")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  verifiedById       String?            @map("verified_by_id") @db.Uuid
+  verifiedAt         DateTime?          @map("verified_at") @db.Timestamptz(3)
+  rejectionReason    String?            @map("rejection_reason")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime?          @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  resident     Resident     @relation(fields: [residentId, organizationId], references: [id, organizationId])
+  verifiedBy   User?        @relation(fields: [verifiedById], references: [id])
+
+  @@index([organizationId])
+  @@index([residentId])
+  @@map("identity_documents")
+}
+
+/// What a resident pays from `effectiveFrom`. Rent changes add a new row; old invoices never change.
+model RentPlan {
+  id                   String       @id @default(uuid(7)) @db.Uuid
+  organizationId       String       @map("organization_id") @db.Uuid
+  residentId           String       @map("resident_id") @db.Uuid
+  monthlyRentPaise     BigInt       @map("monthly_rent_paise")
+  securityDepositPaise BigInt       @map("security_deposit_paise")
+  billingAnchorDay     Int          @map("billing_anchor_day") @db.SmallInt
+  billingCycle         BillingCycle @default(MONTHLY) @map("billing_cycle")
+  effectiveFrom        DateTime     @map("effective_from") @db.Date
+  effectiveTo          DateTime?    @map("effective_to") @db.Date
+  createdById          String?      @map("created_by_id") @db.Uuid
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  resident     Resident     @relation(fields: [residentId, organizationId], references: [id, organizationId])
+  createdBy    User?        @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([residentId, effectiveFrom])
+  @@map("rent_plans")
+}
+
+/// One rent period for one resident.
+model Invoice {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  hostelId       String        @map("hostel_id") @db.Uuid
+  residentId     String        @map("resident_id") @db.Uuid
+  periodStart    DateTime      @map("period_start") @db.Date
+  periodEnd      DateTime      @map("period_end") @db.Date
+  dueDate        DateTime      @map("due_date") @db.Date
+  amountPaise    BigInt        @map("amount_paise")
+  lateFeePaise   BigInt        @default(0) @map("late_fee_paise")
+  /// Sum of RECORDED payments; maintained with each payment write.
+  paidPaise      BigInt        @default(0) @map("paid_paise")
+  status         InvoiceStatus @default(UPCOMING)
+  paidAt         DateTime?     @map("paid_at") @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  resident     Resident     @relation(fields: [residentId, hostelId, organizationId], references: [id, hostelId, organizationId])
+  payments     Payment[]
+
+  @@unique([residentId, periodStart])
+  @@unique([id, residentId, hostelId, organizationId])
+  @@index([organizationId])
+  @@index([hostelId, status])
+  @@index([hostelId, dueDate])
+  @@map("invoices")
+}
+
+/// A payment the resident made directly to the hostel, recorded by staff ("Mark as paid").
+/// Never hard-deleted: mistakes are VOIDED with a reason.
+model Payment {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  hostelId       String        @map("hostel_id") @db.Uuid
+  residentId     String        @map("resident_id") @db.Uuid
+  invoiceId      String        @map("invoice_id") @db.Uuid
+  amountPaise    BigInt        @map("amount_paise")
+  method         PaymentMethod
+  /// e.g. the UPI transaction id the resident shared.
+  reference      String?
+  note           String?
+  paidOn         DateTime      @map("paid_on") @db.Date
+  status         PaymentStatus @default(RECORDED)
+  /// Guards against double submission of the "Mark as paid" form.
+  idempotencyKey String?       @unique @map("idempotency_key")
+  recordedById   String        @map("recorded_by_id") @db.Uuid
+  voidedAt       DateTime?     @map("voided_at") @db.Timestamptz(3)
+  voidedById     String?       @map("voided_by_id") @db.Uuid
+  voidReason     String?       @map("void_reason")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  invoice      Invoice      @relation(fields: [invoiceId, residentId, hostelId, organizationId], references: [id, residentId, hostelId, organizationId])
+  recordedBy   User         @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  voidedBy     User?        @relation("PaymentVoidedBy", fields: [voidedById], references: [id])
+
+  @@index([organizationId])
+  @@index([hostelId, paidOn])
+  @@index([invoiceId])
+  @@index([residentId])
+  @@map("payments")
+}
+
+/// Who did what. Every view or download of an ID document is logged here.
+/// organization_id is NULL only for platform-level events (e.g. an OTP request for an unknown number).
+model AuditLog {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String
+  entity         String
+  entityId       String?  @map("entity_id")
+  metadata       Json     @default("{}")
+  ip             String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  actor        User?         @relation(fields: [actorUserId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([entity, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}

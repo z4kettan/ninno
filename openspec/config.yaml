@@ -1,0 +1,30 @@
+schema: spec-driven
+
+# Project context: constraints an agent cannot infer by reading the code.
+context: |
+  Product: Ninno, a mobile-first hostel management SaaS for India (INR, Asia/Kolkata, +91 phones).
+  Source spec: docs/hostel-app-build-guide.md (sections are referenced as §N). Build in phases (§10);
+  each phase is one or more OpenSpec changes and is done only when its "Done when" list passes.
+  v1 serves one pilot hostel but MUST stay multi-tenant: every business row carries organization_id
+  (and hostel_id where relevant); tenant ids are never taken from the request body.
+  Money is integer paise (bigint), never floats.
+  v1 has NO online payment gateway (owner decision, 2026-10-28): residents pay the hostel directly and
+  staff mark invoices as paid in the app (audit-logged, voidable, never hard-deleted). Build-guide §6
+  (Razorpay/UPI Intent) is deferred; do not add gateway code, webhooks or provider fields until asked.
+  Authentication (owner decision, 2026-10-28): every role logs in with mobile number + OTP only (no
+  passwords). OTPs are generated/hashed/verified by Ninno and delivered via apitxt
+  (POST https://apitxt.com/api/sendOTP, form fields authkey, mobile=91XXXXXXXXXX, otp, channel=sms).
+  A resident account is created only when the onboarding form is submitted (OTP verified at submit).
+  ID documents are sensitive personal data (DPDP Act 2023, UIDAI rules): private storage, masked numbers,
+  short-lived pre-signed URLs, and every view is audit-logged. No PII in logs.
+  Decisions made with the owner (deviations from the source spec):
+  - UI base is Angular CDK + Tailwind with custom components in libs/web/ui, not Angular Material.
+  - Frontend visual design follows the design-taste-frontend skill (no templated "AI slop" look).
+  - Pilot hostel seed uses placeholder data in an editable YAML until real §11 values arrive.
+  Target devices: cheap Android phones on slow 3G, 360px width, 44px tap targets, WCAG AA.
+
+rules:
+  proposal:
+    - State what is out of scope and which build-guide phase (§10) the change belongs to
+  tasks:
+    - Each group lands its own tests; match the build guide's §13 definition of done
