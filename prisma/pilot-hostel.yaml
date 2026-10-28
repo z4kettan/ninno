@@ -1,0 +1,51 @@
+# Pilot hostel seed data (build guide §11).
+#
+# PLACEHOLDER VALUES: a fictional hostel in Kakkanad, Kochi. Replace them with the
+# pilot hostel's real details, then run `pnpm db:seed` again. The seed is repeatable:
+# it updates changed values and adds new rooms, but never deletes rooms or beds.
+#
+# Money is in rupees here and stored as paise. Phones may be written in any common
+# Indian format. Set SEED_OWNER_PHONE in .env to log in with your own number locally.
+
+organization:
+  name: Ninno Demo Stays
+  slug: ninno-demo
+  gstin: null
+
+hostel:
+  name: Ninno Demo Hostel
+  slug: kakkanad
+  address_line1: 2nd Cross Road, near Infopark Phase 1
+  address_line2: Kakkanad
+  city: Kochi
+  state: Kerala
+  pincode: '682030'
+  latitude: 10.0159
+  longitude: 76.3419
+  phone: '+91 90000 00001'
+  gender_policy: MALE # MALE | FEMALE | CO_LIVING
+  amenities: [wifi, food, laundry, power_backup]
+  upi_vpa: null # the hostel's own UPI id, shown to residents as "how to pay"
+  rules_text: |
+    Gate closes at 10:30 pm.
+    Visitors are allowed in the lobby until 8 pm.
+    Rent is due within 5 days of your billing date.
+
+billing:
+  mode: CHECKIN_ANNIVERSARY # CHECKIN_ANNIVERSARY | FIXED_DAY
+  fixed_due_day: null # 1-28, required when mode is FIXED_DAY
+  grace_days: 5
+  invoice_lead_days: 7
+  security_deposit: 5000
+
+# capacity is implied by type (SINGLE 1, DOUBLE 2, TRIPLE 3); DORM rooms must set it.
+rooms:
+  - { number: '101', floor: 1, type: DOUBLE, monthly_rent: 6500 }
+  - { number: '102', floor: 1, type: TRIPLE, monthly_rent: 5500 }
+  - { number: '201', floor: 2, type: SINGLE, monthly_rent: 9000 }
+  - { number: '202', floor: 2, type: DORM, capacity: 6, monthly_rent: 4000 }
+
+owner:
+  name: Demo Owner
+  phone: '+91 90000 00002'
+  email: null

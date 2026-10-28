@@ -39,6 +39,23 @@ Check that it's up:
 
 Stop the infrastructure with `pnpm infra:down` (data persists in Docker volumes).
 
+## Database
+
+Postgres runs in Docker on host port **5433**, not 5432, so it doesn't clash with a locally installed PostgreSQL. The schema lives in [prisma/schema.prisma](prisma/schema.prisma), and migrations are in `prisma/migrations/` (committed).
+
+```sh
+pnpm db:migrate                        # apply committed migrations (non-destructive)
+pnpm db:seed                           # create/update the pilot hostel from prisma/pilot-hostel.yaml
+pnpm db:migrate:new --name add_thing   # after editing schema.prisma: write a new migration to review
+pnpm db:reset                          # DESTRUCTIVE: wipe the dev DB, re-migrate and re-seed
+pnpm db:studio                         # browse data
+```
+
+- **Pilot data:** [prisma/pilot-hostel.yaml](prisma/pilot-hostel.yaml) holds placeholder values until the real hostel details arrive. Edit it and re-run `pnpm db:seed`. The seed updates changed values and never deletes rooms or beds.
+- **Log in as the owner locally:** set `SEED_OWNER_PHONE=<your number>` in `.env`, then run `pnpm db:seed`.
+- **Tenant safety:** child rows reference parents through composite `(id, organization_id)` keys, so the database itself rejects cross-hostel links. Some constraints (CHECKs, partial indexes, a view) are hand-written in the migration SQL.
+- **DB tests:** `pnpm exec nx run api:test-db` creates a throwaway `ninno_test_<timestamp>_<pid>` database, migrates it, runs `*.db.spec.ts`, and drops it. No existing database is touched.
+
 ## Everyday commands
 
 | Command                         | What it does                           |

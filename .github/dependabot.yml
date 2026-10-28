@@ -12,6 +12,17 @@ updates:
         patterns: ['nx', '@nx/*']
       nestjs:
         patterns: ['@nestjs/*']
+    # Majors we pinned on purpose (see openspec design notes): NestJS 11 matches the
+    # @nx/nest plugin, and Prisma 8 is still pre-release. Upgrade these deliberately.
+    ignore:
+      - dependency-name: '@nestjs/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'prisma'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@prisma/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
 
   - package-ecosystem: github-actions
     directory: /

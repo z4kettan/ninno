@@ -6,6 +6,7 @@ import { AllExceptionsFilter } from '../common/errors/all-exceptions.filter';
 import { buildLoggerOptions } from '../common/logging/logger.options';
 import { ConfigModule } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
+import { PrismaModule } from '../database/prisma.module';
 import { HealthModule } from '../modules/health/health.module';
 
 @Module({})
@@ -17,6 +18,7 @@ export class AppModule {
         ConfigModule.forRoot(config),
         LoggerModule.forRoot(buildLoggerOptions(config)),
         ThrottlerModule.forRoot([{ ttl: 60_000, limit: config.rateLimitPerMinute }]),
+        PrismaModule,
         HealthModule,
       ],
       providers: [

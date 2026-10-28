@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { IsInt, IsString, Min } from 'class-validator';
 import request from 'supertest';
 import { type AppConfig, loadConfig } from '../config/env.schema';
+import { PrismaService } from '../database/prisma.service';
 import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
 
@@ -42,12 +43,18 @@ const baseEnv = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
 };
 
+/** Stands in for the database so these tests need no Postgres. */
+const prismaStub = { isReachable: jest.fn<Promise<boolean>, [number?]>() };
+
 async function createApp(env: Record<string, string> = {}): Promise<NestExpressApplication> {
   const config: AppConfig = loadConfig({ ...baseEnv, ...env });
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule.register(config)],
     controllers: [ProbeController],
-  }).compile();
+  })
+    .overrideProvider(PrismaService)
+    .useValue(prismaStub)
+    .compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false });
   configureApp(app, config);
   await app.init();
@@ -58,6 +65,7 @@ describe('API platform', () => {
   let app: NestExpressApplication;
 
   beforeAll(async () => {
+    prismaStub.isReachable.mockResolvedValue(true);
     app = await createApp();
   });
 
@@ -77,9 +85,27 @@ describe('API platform', () => {
   });
 
   describe('health check', () => {
-    it('returns ok at /health without auth', async () => {
+    it('returns ok at /health without auth when the database is up', async () => {
+      prismaStub.isReachable.mockResolvedValueOnce(true);
       const res = await request(app.getHttpServer()).get('/health').expect(200);
-      expect(res.body).toEqual({ status: 'ok', version: 'dev', uptimeSeconds: expect.any(Number) });
+      expect(res.body).toEqual({
+        status: 'ok',
+        version: 'dev',
+        uptimeSeconds: expect.any(Number),
+        checks: { database: 'up' },
+      });
+    });
+
+    it('returns 503 without connection details when the database is down', async () => {
+      prismaStub.isReachable.mockResolvedValueOnce(false);
+      const res = await request(app.getHttpServer()).get('/health').expect(503);
+      expect(res.body).toEqual({
+        status: 'error',
+        version: 'dev',
+        uptimeSeconds: expect.any(Number),
+        checks: { database: 'down' },
+      });
+      expect(JSON.stringify(res.body)).not.toMatch(/postgres|5432|localhost/);
     });
   });
 

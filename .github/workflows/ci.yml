@@ -47,6 +47,36 @@ jobs:
         if: github.event_name == 'push'
         run: pnpm exec nx run-many -t lint typecheck test build
 
+  database:
+    name: Database tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ninno
+          POSTGRES_PASSWORD: ninno
+          # Admin database; each test run creates and drops its own ninno_test_<ts>_<pid>.
+          POSTGRES_DB: ninno_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ninno -d ninno_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL_TEST: postgresql://ninno:ninno@localhost:5432/ninno_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec nx run api:test-db
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest

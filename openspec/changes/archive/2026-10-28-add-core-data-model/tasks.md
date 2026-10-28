@@ -14,18 +14,18 @@
 
 ## 3. API integration (`api-platform`)
 
-- [ ] 3.1 `PrismaModule`/`PrismaService` using the pg adapter with lifecycle hooks; verify the API boots against the dev DB
-- [ ] 3.2 Health check reports `checks.database` with a 2 s timeout and 503 when down; update the platform e2e test with a stubbed Prisma, and add a DB test for the reachable case
+- [x] 3.1 `PrismaModule`/`PrismaService` using the pg adapter with lifecycle hooks; verify the API boots against the dev DB
+- [x] 3.2 Health check reports `checks.database` with a 2 s timeout and 503 when down; update the platform e2e test with a stubbed Prisma, and add a DB test for the reachable case
 
 ## 4. Pilot seed (`pilot-seed`)
 
-- [ ] 4.1 Write `prisma/pilot-hostel.yaml` with placeholder Kochi data and the zod schema for it; unit-test that an invalid owner phone names `owner.phone`
-- [ ] 4.2 Implement `prisma/seed.ts` (validate first, then upsert in one transaction, beds up to capacity, `SEED_OWNER_PHONE` override); DB tests for the fresh-run, repeat-run, rent-change and override scenarios
-- [ ] 4.3 Add `db:migrate`, `db:seed`, `db:reset` and `db:studio` root scripts and document them in the README; verify `pnpm db:reset` migrates and seeds the dev DB
+- [x] 4.1 Write `prisma/pilot-hostel.yaml` with placeholder Kochi data and the zod schema for it; unit-test that an invalid owner phone names `owner.phone`
+- [x] 4.2 Implement `prisma/seed.ts` (validate first, then upsert in one transaction, beds up to capacity, `SEED_OWNER_PHONE` override); DB tests for the fresh-run, repeat-run, rent-change and override scenarios
+- [x] 4.3 Add `db:migrate`, `db:migrate:new`, `db:seed`, `db:reset` and `db:studio` root scripts and document them in the README; verify `pnpm db:migrate` and two `pnpm db:seed` runs leave the dev DB migrated and seeded without duplicates (`db:reset` is destructive and left for humans to run)
 
 ## 5. CI
 
-- [ ] 5.1 Add a Postgres service and the `api:test-db` step to `ci.yml`; verify locally that `pnpm exec nx run-many -t lint typecheck test build` and `nx run api:test-db` are green
+- [x] 5.1 Add a Postgres service and the `api:test-db` step to `ci.yml`; verify locally that `pnpm exec nx run-many -t lint typecheck test build` and `nx run api:test-db` are green
 
 ## Workflow follow-up
 
