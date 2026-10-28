@@ -76,6 +76,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec nx run api:test-db
+      # Fails if the committed migrations and schema.prisma disagree (e.g. a schema edit
+      # without a migration). Hand-written constraints are guarded by the DB tests above.
+      - name: Schema drift check
+        run: |
+          pnpm exec prisma migrate deploy
+          pnpm db:drift
+        env:
+          DATABASE_URL: postgresql://ninno:ninno@localhost:5432/ninno_test?schema=public
 
   audit:
     name: Dependency audit

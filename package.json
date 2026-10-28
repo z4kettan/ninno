@@ -20,7 +20,8 @@
     "db:migrate:new": "prisma migrate dev --create-only",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force && prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:drift": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
   },
   "packageManager": "pnpm@12.8.1",
   "engines": {
