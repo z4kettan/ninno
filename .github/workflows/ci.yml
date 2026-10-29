@@ -35,7 +35,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Sets NX_BASE / NX_HEAD so `nx affected` compares against the right commit.
-      - uses: nrwl/nx-set-shas@v4
+      - uses: nrwl/nx-set-shas@v5
 
       - run: pnpm exec prettier --check .
 
