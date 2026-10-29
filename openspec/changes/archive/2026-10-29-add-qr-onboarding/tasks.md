@@ -41,7 +41,7 @@
 - [x] 7.1 Playwright (mocked API, 360px): scan link → six steps with fixture images → code → waiting screen; staff approve → resident active; plus the QR and print view
 - [x] 7.2 Real-stack smoke with `pnpm dev`: register a new resident through the real UI and storage (code from the console), approve as the seeded owner, and confirm the resident is ACTIVE in the chosen bed; document it in the README
 - [x] 7.3 Full gate green: `lint typecheck test build`, `api:test-db` with storage, `db:drift`, web e2e (repeated 5× with no flakes)
-- [ ] 7.4 **Owner checkpoint:** show results, screenshots and changed files, plus the draft consent text for review; commit and push after approval, then verify CI on GitHub
+- [x] 7.4 **Owner checkpoint:** show results, screenshots and changed files, plus the draft consent text for review; commit and push after approval, then verify CI on GitHub
 
 ## Workflow follow-up
 
