@@ -3,7 +3,8 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { IsInt, IsString, Min } from 'class-validator';
 import request from 'supertest';
-import { type AppConfig, loadConfig } from '../config/env.schema';
+import { testConfig } from '../../test/test-config';
+import { Public } from '../common/auth/auth.decorators';
 import { PrismaService } from '../database/prisma.service';
 import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
@@ -18,6 +19,7 @@ class ProbeDto {
 }
 
 /** Test-only routes that exercise the platform behaviour. */
+@Public()
 @Controller('probe')
 class ProbeController {
   @Get()
@@ -36,18 +38,11 @@ class ProbeController {
   }
 }
 
-const baseEnv = {
-  NODE_ENV: 'test',
-  LOG_LEVEL: 'fatal',
-  WEB_ORIGINS: 'http://localhost:4200',
-  DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
-};
-
 /** Stands in for the database so these tests need no Postgres. */
 const prismaStub = { isReachable: jest.fn<Promise<boolean>, [number?]>() };
 
 async function createApp(env: Record<string, string> = {}): Promise<NestExpressApplication> {
-  const config: AppConfig = loadConfig({ ...baseEnv, ...env });
+  const config = testConfig(env);
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule.register(config)],
     controllers: [ProbeController],
@@ -224,7 +219,7 @@ describe('API platform', () => {
 
 describe('API platform in production', () => {
   it('does not serve /api/docs', async () => {
-    const app = await createApp({ NODE_ENV: 'production' });
+    const app = await createApp({ NODE_ENV: 'production', APITXT_AUTH_KEY: 'test-key' });
     await request(app.getHttpServer()).get('/api/docs').expect(404);
     await app.close();
   });

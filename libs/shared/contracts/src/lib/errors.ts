@@ -9,6 +9,12 @@ export const ErrorCode = {
   PayloadTooLarge: 'PAYLOAD_TOO_LARGE',
   RateLimited: 'RATE_LIMITED',
   InternalError: 'INTERNAL_ERROR',
+  // Auth
+  OtpInvalid: 'OTP_INVALID',
+  OtpLocked: 'OTP_LOCKED',
+  OtpCooldown: 'OTP_COOLDOWN',
+  OtpDeliveryFailed: 'OTP_DELIVERY_FAILED',
+  TenantRequired: 'TENANT_REQUIRED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

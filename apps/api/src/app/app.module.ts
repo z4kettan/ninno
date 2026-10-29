@@ -1,13 +1,23 @@
-import { type DynamicModule, Module } from '@nestjs/common';
+import { type DynamicModule, type ExecutionContext, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { AUTH_THROTTLED } from '../common/auth/auth.decorators';
+import { JwtAuthGuard } from '../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../common/auth/roles.guard';
+import { TenantGuard } from '../common/auth/tenant.guard';
+import { ClockModule } from '../common/clock';
 import { AllExceptionsFilter } from '../common/errors/all-exceptions.filter';
 import { buildLoggerOptions } from '../common/logging/logger.options';
 import { ConfigModule } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
 import { PrismaModule } from '../database/prisma.module';
+import { AuditModule } from '../modules/audit/audit.module';
+import { AuthModule } from '../modules/auth/auth.module';
 import { HealthModule } from '../modules/health/health.module';
+
+const isAuthThrottled = (context: ExecutionContext): boolean =>
+  Reflect.getMetadata(AUTH_THROTTLED, context.getHandler()) === true;
 
 @Module({})
 export class AppModule {
@@ -17,12 +27,28 @@ export class AppModule {
       imports: [
         ConfigModule.forRoot(config),
         LoggerModule.forRoot(buildLoggerOptions(config)),
-        ThrottlerModule.forRoot([{ ttl: 60_000, limit: config.rateLimitPerMinute }]),
+        ThrottlerModule.forRoot([
+          { name: 'default', ttl: 60_000, limit: config.rateLimitPerMinute },
+          // Stricter per-IP limit, only on routes marked @AuthThrottled() (OTP request/verify).
+          {
+            name: 'auth',
+            ttl: 60_000,
+            limit: config.authRateLimitPerMinute,
+            skipIf: (context) => !isAuthThrottled(context),
+          },
+        ]),
+        ClockModule,
         PrismaModule,
+        AuditModule,
+        AuthModule,
         HealthModule,
       ],
       providers: [
+        // Guards run in this order: rate limit, authentication, tenant resolution, roles.
         { provide: APP_GUARD, useClass: ThrottlerGuard },
+        { provide: APP_GUARD, useClass: JwtAuthGuard },
+        { provide: APP_GUARD, useClass: TenantGuard },
+        { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
       ],
     };

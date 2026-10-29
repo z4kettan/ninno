@@ -256,6 +256,7 @@ model User {
   recordedPayments  Payment[]          @relation("PaymentRecordedBy")
   voidedPayments    Payment[]          @relation("PaymentVoidedBy")
   auditLogs         AuditLog[]
+  refreshTokens     RefreshToken[]
 
   @@map("users")
 }
@@ -500,4 +501,54 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([actorUserId])
   @@map("audit_logs")
+}
+
+enum OtpPurpose {
+  LOGIN
+  SIGNUP
+}
+
+/// The single live one-time code for a phone and purpose; a new request overwrites it.
+/// Rows exist for unknown numbers too (code never sent) so limits and lockouts can't reveal accounts.
+model OtpChallenge {
+  id                String     @id @default(uuid(7)) @db.Uuid
+  phone             String     @db.VarChar(13)
+  purpose           OtpPurpose
+  /// HMAC-SHA256(OTP_PEPPER, purpose|phone|code). The code itself is never stored.
+  codeHash          String     @map("code_hash")
+  attempts          Int        @default(0) @db.SmallInt
+  expiresAt         DateTime   @map("expires_at") @db.Timestamptz(3)
+  consumedAt        DateTime?  @map("consumed_at") @db.Timestamptz(3)
+  lockedAt          DateTime?  @map("locked_at") @db.Timestamptz(3)
+  lastSentAt        DateTime   @map("last_sent_at") @db.Timestamptz(3)
+  sendWindowStart   DateTime   @map("send_window_start") @db.Timestamptz(3)
+  sendCountInWindow Int        @default(1) @map("send_count_in_window") @db.SmallInt
+  /// False when the number has no account and nothing was actually sent.
+  delivered         Boolean
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([phone, purpose])
+  @@map("otp_challenges")
+}
+
+/// Opaque refresh token (stored as SHA-256). Tokens from one login share a family;
+/// presenting a rotated token revokes the whole family.
+model RefreshToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  familyId  String    @map("family_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  rotatedAt DateTime? @map("rotated_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  ip        String?
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([familyId])
+  @@index([userId])
+  @@map("refresh_tokens")
 }

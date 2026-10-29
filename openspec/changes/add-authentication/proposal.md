@@ -41,6 +41,6 @@ Hostel staff and residents both use Ninno on their phones, and neither should ha
 ## Impact
 
 - New `auth`, `users` and `audit` API modules, plus the `OtpChallenge` and `RefreshToken` tables (migration). `User.password_hash` is dropped from the §4 model.
-- New env vars: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `OTP_PEPPER`, `OTP_SENDER` (`apitxt` | `console`), `APITXT_AUTH_KEY`, `APITXT_CHANNEL`, `APITXT_TEMPLATE_ID` (optional; a DLT-approved template is required for production SMS in India), `COOKIE_DOMAIN`.
+- New env vars: `JWT_ACCESS_SECRET`, `OTP_PEPPER`, `OTP_SENDER` (`apitxt` | `console`), `APITXT_AUTH_KEY`, `APITXT_CHANNEL`, `APITXT_TEMPLATE_ID` (optional; a DLT-approved template is required for production SMS in India), `COOKIE_DOMAIN`.
 - Each SMS costs wallet credits on apitxt (about ₹0.25), and the rate limits keep abuse costs bounded.
 - Contracts for auth DTOs in `@ninno/contracts`, used by the web login screen.

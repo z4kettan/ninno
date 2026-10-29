@@ -1,6 +1,7 @@
 import { type INestApplication, VersioningType } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
@@ -27,6 +28,8 @@ export function configureApp(app: NestExpressApplication, config: AppConfig): IN
   });
   app.use(express.json({ limit: config.bodyLimit }));
   app.use(express.urlencoded({ extended: false, limit: config.bodyLimit }));
+  // Reads the httpOnly refresh-token cookie on /api/v1/auth routes.
+  app.use(cookieParser());
   // Body-parser errors happen outside Nest, so they need the same envelope here.
   app.use((error: unknown, req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {

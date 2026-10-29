@@ -1,10 +1,9 @@
-import { loadConfig } from '../config/env.schema';
 import { runDatabaseUrl } from '../../test/db/env';
+import { testConfig } from '../../test/test-config';
 import { PrismaService } from './prisma.service';
 
 describe('PrismaService.isReachable', () => {
-  const config = (databaseUrl: string) =>
-    loadConfig({ WEB_ORIGINS: 'http://localhost:4300', DATABASE_URL: databaseUrl });
+  const config = (databaseUrl: string) => testConfig({ DATABASE_URL: databaseUrl });
 
   it('is true for a running database', async () => {
     const prisma = new PrismaService(config(runDatabaseUrl()));
