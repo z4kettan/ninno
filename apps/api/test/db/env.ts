@@ -47,3 +47,27 @@ export function withDatabase(url: string, database: string): string {
   next.pathname = `/${database}`;
   return next.toString();
 }
+
+/** Set by the global setup to the throwaway bucket created for this run. */
+export const RUN_BUCKET_ENV = 'NINNO_TEST_RUN_BUCKET';
+
+/** Throwaway buckets look like `ninno-test-<epoch ms>-<pid>`; nothing else is ever emptied. */
+export const RUN_BUCKET_PATTERN = /^ninno-test-\d+-\d+$/;
+
+/**
+ * S3-compatible storage for DB tests: S3_* from the environment or .env, with the
+ * docker-compose RustFS as the default. The bucket is always this run's own.
+ */
+export function testStorageEnv(bucket = process.env[RUN_BUCKET_ENV]): Record<string, string> {
+  testAdminUrl(); // loads .env if present
+  if (!bucket) {
+    throw new Error(`${RUN_BUCKET_ENV} is not set; run DB tests via \`nx run api:test-db\`.`);
+  }
+  return {
+    S3_ENDPOINT: process.env['S3_ENDPOINT'] || 'http://localhost:9000',
+    S3_REGION: process.env['S3_REGION'] || 'ap-south-1',
+    S3_ACCESS_KEY_ID: process.env['S3_ACCESS_KEY_ID'] || 'ninno',
+    S3_SECRET_ACCESS_KEY: process.env['S3_SECRET_ACCESS_KEY'] || 'ninno-dev-secret',
+    S3_BUCKET: bucket,
+  };
+}

@@ -9,7 +9,7 @@ import { PrismaService } from '../../src/database/prisma.service';
 import { OTP_SENDER } from '../../src/modules/auth/otp/otp-sender';
 import { CapturingOtpSender, TestClock } from '../auth-doubles';
 import { testConfig } from '../test-config';
-import { runDatabaseUrl } from './env';
+import { runDatabaseUrl, testStorageEnv } from './env';
 
 export interface TestApp {
   app: NestExpressApplication;
@@ -27,6 +27,7 @@ export async function createTestApp(
     DATABASE_URL: runDatabaseUrl(),
     RATE_LIMIT_PER_MINUTE: '10000',
     AUTH_RATE_LIMIT_PER_MINUTE: '10000',
+    ...testStorageEnv(),
     ...options.env,
   });
   const sender = new CapturingOtpSender();

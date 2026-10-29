@@ -1,4 +1,10 @@
-import { InvalidPhoneError, isValidIndianPhone, maskPhone, normalizeIndianPhone } from './phone';
+import {
+  formatIndianPhone,
+  InvalidPhoneError,
+  isValidIndianPhone,
+  maskPhone,
+  normalizeIndianPhone,
+} from './phone';
 
 describe('normalizeIndianPhone', () => {
   it.each([
@@ -22,6 +28,17 @@ describe('normalizeIndianPhone', () => {
 
   it('keeps the number out of the error message', () => {
     expect(() => normalizeIndianPhone('5876543210')).toThrow('Invalid Indian mobile number');
+  });
+});
+
+describe('formatIndianPhone', () => {
+  it('groups the ten digits after +91', () => {
+    expect(formatIndianPhone('+919876543210')).toBe('+91 98765 43210');
+    expect(formatIndianPhone('98765-43210')).toBe('+91 98765 43210');
+  });
+
+  it('leaves anything else as it was', () => {
+    expect(formatIndianPhone('12345')).toBe('12345');
   });
 });
 

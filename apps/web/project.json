@@ -21,7 +21,8 @@
           }
         ],
         "styles": ["apps/web/src/styles.css"],
-        "polyfills": ["@angular/localize/init"]
+        "polyfills": ["@angular/localize/init"],
+        "allowedCommonJsDependencies": ["qrcode"]
       },
       "configurations": {
         "production": {

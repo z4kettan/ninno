@@ -21,7 +21,13 @@ import type { NavItem } from '../shared/nav';
             class="flex min-h-12 items-center gap-3 rounded-control px-2 hover:bg-raised"
           >
             <nn-icon [name]="item.icon" class="text-muted" />
-            {{ item.label }}
+            <span class="flex-1">{{ item.label }}</span>
+            @if (item.badge) {
+              <span
+                class="min-w-6 rounded-full bg-accent-soft px-1.5 text-center text-xs font-semibold leading-5 text-accent-ink num"
+                >{{ item.badge }}<span class="sr-only" i18n> waiting</span></span
+              >
+            }
           </a>
         </li>
       }

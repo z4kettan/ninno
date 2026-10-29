@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { NnIcon, NnMark, SheetService } from '@ninno/ui';
 import { AuthStore } from '../../core/auth/auth.store';
 import { type NavItem, NnTabBar } from '../shared/nav';
+import { ApprovalsBadge } from './approvals/approvals-badge';
 import { StaffMoreSheet } from './staff-more-sheet';
 
 const ALL: NavItem[] = [
@@ -11,8 +12,10 @@ const ALL: NavItem[] = [
   { label: $localize`Approvals`, icon: 'approvals', link: '/admin/approvals' },
   { label: $localize`Beds`, icon: 'beds', link: '/admin/beds' },
   { label: $localize`Payments`, icon: 'payments', link: '/admin/payments' },
+  { label: $localize`Onboarding QR`, icon: 'qr', link: '/admin/onboarding' },
   { label: $localize`Settings`, icon: 'settings', link: '/admin/settings' },
 ];
+const TAB_LINKS = ['/admin', '/admin/residents', '/admin/beds'];
 
 /**
  * Staff: a labelled sidebar from 1024px (open plane: on the page ground, one hairline), and
@@ -21,6 +24,8 @@ const ALL: NavItem[] = [
 @Component({
   selector: 'nn-staff-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, NnIcon, NnMark, NnTabBar],
+  // One badge for the shell and every staff page under it (approvals refresh it).
+  providers: [ApprovalsBadge],
   template: `
     <div class="min-h-dvh lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside
@@ -33,7 +38,7 @@ const ALL: NavItem[] = [
           <p class="mt-3 truncate text-sm font-medium" [title]="scope()">{{ scope() }}</p>
         </div>
         <nav class="mt-6 flex flex-col gap-0.5" aria-label="Staff" i18n-aria-label>
-          @for (item of all; track item.link) {
+          @for (item of all(); track item.link) {
             <a
               [routerLink]="item.link"
               routerLinkActive="!bg-accent-soft !text-accent-ink font-semibold [&_nn-icon]:text-accent"
@@ -42,7 +47,13 @@ const ALL: NavItem[] = [
               class="flex h-10 items-center gap-2.5 rounded-control px-2.5 text-sm text-muted hover:bg-raised"
             >
               <nn-icon [name]="item.icon" [size]="18" />
-              {{ item.label }}
+              <span class="flex-1">{{ item.label }}</span>
+              @if (item.badge) {
+                <span
+                  class="min-w-6 rounded-full bg-accent-soft px-1.5 text-center text-xs font-semibold leading-5 text-accent-ink num"
+                  >{{ item.badge }}<span class="sr-only" i18n> waiting</span></span
+                >
+              }
             </a>
           }
         </nav>
@@ -74,10 +85,11 @@ const ALL: NavItem[] = [
 
     <nn-tab-bar
       class="fixed inset-x-0 bottom-0 z-10 block lg:hidden"
-      [items]="tabs"
+      [items]="tabs()"
       label="Staff"
       moreLabel="More"
       i18n-moreLabel
+      [moreBadge]="badge.count()"
       (more)="openMore()"
     />
   `,
@@ -88,10 +100,14 @@ export class StaffShell {
   private readonly router = inject(Router);
   private readonly sheet = inject(SheetService);
 
-  protected readonly all = ALL;
-  protected readonly tabs = ALL.filter((i) =>
-    ['/admin', '/admin/residents', '/admin/beds'].includes(i.link),
+  protected readonly badge = inject(ApprovalsBadge);
+
+  protected readonly all = computed<NavItem[]>(() =>
+    ALL.map((item) =>
+      item.link === '/admin/approvals' ? { ...item, badge: this.badge.count() } : item,
+    ),
   );
+  protected readonly tabs = computed(() => this.all().filter((i) => TAB_LINKS.includes(i.link)));
   protected readonly scope = computed(() => {
     const m = this.store.staffMembership();
     return m?.hostelName ?? m?.organizationName ?? '';
@@ -100,7 +116,7 @@ export class StaffShell {
   protected openMore(): void {
     this.sheet.open(StaffMoreSheet, {
       label: $localize`More`,
-      data: ALL.filter((i) => !this.tabs.includes(i)),
+      data: this.all().filter((i) => !TAB_LINKS.includes(i.link)),
     });
   }
 

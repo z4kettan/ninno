@@ -15,6 +15,14 @@ export const ErrorCode = {
   OtpCooldown: 'OTP_COOLDOWN',
   OtpDeliveryFailed: 'OTP_DELIVERY_FAILED',
   TenantRequired: 'TENANT_REQUIRED',
+  // Onboarding
+  LinkInvalid: 'LINK_INVALID',
+  AlreadyRegistered: 'ALREADY_REGISTERED',
+  FileTooLarge: 'FILE_TOO_LARGE',
+  FileInvalid: 'FILE_INVALID',
+  // Approvals
+  BedUnavailable: 'BED_UNAVAILABLE',
+  NotPending: 'NOT_PENDING',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

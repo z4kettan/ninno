@@ -5,6 +5,9 @@ const valid = {
   DATABASE_URL: 'postgresql://ninno:s3cret-pass@localhost:5432/ninno',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   OTP_PEPPER: 'b'.repeat(32),
+  S3_BUCKET: 'ninno-private',
+  S3_ACCESS_KEY_ID: 'key',
+  S3_SECRET_ACCESS_KEY: 'secret',
 };
 
 const production = { ...valid, NODE_ENV: 'production' };
@@ -83,6 +86,49 @@ describe('loadConfig', () => {
 
     it('requires a key whenever apitxt is chosen explicitly', () => {
       expect(() => loadConfig({ ...valid, OTP_SENDER: 'apitxt' })).toThrow(/APITXT_AUTH_KEY/);
+    });
+  });
+  it('builds join links from APP_URL, or the first web origin', () => {
+    expect(loadConfig(valid).appUrl).toBe('http://localhost:4200');
+    expect(loadConfig({ ...valid, APP_URL: 'https://app.ninno.in/' }).appUrl).toBe(
+      'https://app.ninno.in',
+    );
+  });
+
+  describe('storage', () => {
+    it('uses path-style addressing for a custom endpoint and signs for it by default', () => {
+      const config = loadConfig({ ...valid, S3_ENDPOINT: 'http://localhost:9000' });
+      expect(config.storage).toEqual({
+        endpoint: 'http://localhost:9000',
+        publicEndpoint: 'http://localhost:9000',
+        region: 'ap-south-1',
+        bucket: 'ninno-private',
+        accessKeyId: 'key',
+        secretAccessKey: 'secret',
+        forcePathStyle: true,
+      });
+    });
+
+    it('defaults to virtual-hosted AWS S3 without an endpoint', () => {
+      expect(loadConfig(valid).storage).toMatchObject({
+        endpoint: undefined,
+        forcePathStyle: false,
+      });
+    });
+
+    it('lets phones reach storage at a separate public endpoint', () => {
+      const config = loadConfig({
+        ...valid,
+        S3_ENDPOINT: 'http://s3:9000',
+        S3_PUBLIC_ENDPOINT: 'https://files.ninno.in',
+      });
+      expect(config.storage.publicEndpoint).toBe('https://files.ninno.in');
+    });
+
+    it('requires the bucket and keys', () => {
+      const { S3_BUCKET: _b, S3_SECRET_ACCESS_KEY: _s, ...env } = valid;
+      expect(() => loadConfig(env)).toThrow(/S3_BUCKET: is required/);
+      expect(() => loadConfig(env)).toThrow(/S3_SECRET_ACCESS_KEY: is required/);
     });
   });
 });

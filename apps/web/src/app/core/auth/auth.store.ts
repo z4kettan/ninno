@@ -106,6 +106,11 @@ export class AuthStore {
     }
   }
 
+  /** Signs in with a session obtained elsewhere (onboarding signup). */
+  acceptSession(session: AuthSession): void {
+    this.accept(session);
+  }
+
   /** Forgets the session locally (the server side is handled by logout or has already expired). */
   clear(): void {
     this.accessToken = null;

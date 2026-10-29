@@ -17,6 +17,12 @@ export const appRoutes: Route[] = [
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
   {
+    // Public: the hostel's QR code opens this, signed in or not.
+    path: 'join/:token',
+    title: 'Join your hostel · Ninno',
+    loadComponent: () => import('./features/join/join-page').then((m) => m.JoinPage),
+  },
+  {
     path: 'no-access',
     canActivate: [signedIn],
     title: 'Not linked yet · Ninno',
@@ -66,10 +72,23 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'approvals',
-        ...placeholder(
-          'Approvals',
-          'New sign-ups wait here for you to check their ID and assign a bed.',
-        ),
+        title: 'Approvals · Ninno',
+        loadComponent: () =>
+          import('./features/staff/approvals/approvals-page').then((m) => m.ApprovalsPage),
+      },
+      {
+        path: 'approvals/:id',
+        title: 'Application · Ninno',
+        loadComponent: () =>
+          import('./features/staff/approvals/approval-detail-page').then(
+            (m) => m.ApprovalDetailPage,
+          ),
+      },
+      {
+        path: 'onboarding',
+        title: 'Onboarding QR · Ninno',
+        loadComponent: () =>
+          import('./features/staff/onboarding/onboarding-qr-page').then((m) => m.OnboardingQrPage),
       },
       {
         path: 'beds',

@@ -18,6 +18,9 @@ const PATHS = {
   close: 'M6 6l12 12M18 6 6 18',
   install: 'M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14',
   chevronLeft: 'M15 5l-7 7 7 7',
+  qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z',
+  copy: 'M8 8h11v12H8zM5 16V4h11',
+  camera: 'M4 8h3.5l1.8-2.5h5.4L16.5 8H20v11H4zM12 16.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

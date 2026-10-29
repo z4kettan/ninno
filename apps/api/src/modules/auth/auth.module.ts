@@ -27,7 +27,7 @@ import { TokenService } from './tokens/token.service';
           : new ConsoleOtpSender(),
     },
   ],
-  // OtpService is reused by onboarding signup (Phase 2); TokenService by the global auth guard.
-  exports: [OtpService, TokenService],
+  // Onboarding signup reuses OtpService and AuthService; the global auth guard uses TokenService.
+  exports: [AuthService, OtpService, TokenService],
 })
 export class AuthModule {}

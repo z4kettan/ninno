@@ -1,4 +1,4 @@
-import { formatIstDate, toIstDate, todayIst } from './dates';
+import { ageOn, formatIstDate, isIsoDate, toIstDate, todayIst } from './dates';
 
 describe('toIstDate', () => {
   it('rolls a late-evening UTC instant into the next IST day', () => {
@@ -23,5 +23,32 @@ describe('formatIstDate', () => {
 
   it('rejects malformed input', () => {
     expect(() => formatIstDate('10/03/2026')).toThrow(RangeError);
+  });
+});
+
+describe('isIsoDate', () => {
+  it.each(['2026-03-10', '2028-02-29'])('accepts %j', (value) => {
+    expect(isIsoDate(value)).toBe(true);
+  });
+
+  it.each(['2026-02-29', '2026-13-01', '2026-3-10', '10-03-2026', ''])('rejects %j', (value) => {
+    expect(isIsoDate(value)).toBe(false);
+  });
+});
+
+describe('ageOn', () => {
+  it('counts a birthday only once it has arrived', () => {
+    expect(ageOn('2010-03-10', '2026-03-09')).toBe(15);
+    expect(ageOn('2010-03-10', '2026-03-10')).toBe(16);
+  });
+
+  it('treats a 29 February birthday as reached on 1 March in common years', () => {
+    expect(ageOn('2008-02-29', '2024-02-28')).toBe(15);
+    expect(ageOn('2008-02-29', '2024-02-29')).toBe(16);
+    expect(ageOn('2008-02-29', '2025-02-28')).toBe(16);
+  });
+
+  it('rejects invalid dates', () => {
+    expect(() => ageOn('2010-02-30', '2026-03-10')).toThrow(RangeError);
   });
 });

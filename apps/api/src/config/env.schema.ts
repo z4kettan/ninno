@@ -20,6 +20,8 @@ const envSchema = z
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     APP_VERSION: z.string().min(1).default('dev'),
     WEB_ORIGINS: csvOfOrigins,
+    /** Public address of the web app, used in join links. Defaults to the first WEB_ORIGINS entry. */
+    APP_URL: z.url().optional(),
     BODY_LIMIT: z
       .string()
       .regex(/^\d+(b|kb|mb)$/i, 'must look like 100kb')
@@ -39,6 +41,18 @@ const envSchema = z
     APITXT_AUTH_KEY: z.string().min(1).optional(),
     APITXT_CHANNEL: z.enum(['sms', 'whatsapp', 'voice']).default('sms'),
     APITXT_TEMPLATE_ID: z.string().regex(/^\d+$/, 'must be a numeric template id').optional(),
+
+    // Private object storage for selfies and ID documents (S3, R2, or RustFS locally).
+    // Unset S3_ENDPOINT means AWS S3 itself.
+    S3_ENDPOINT: z.url().optional(),
+    /** Where phones reach storage for signed URLs, if different from S3_ENDPOINT. */
+    S3_PUBLIC_ENDPOINT: z.url().optional(),
+    S3_REGION: z.string().min(1).default('ap-south-1'),
+    S3_BUCKET: z.string().min(3),
+    S3_ACCESS_KEY_ID: z.string().min(1),
+    S3_SECRET_ACCESS_KEY: z.string().min(1),
+    /** Defaults to true when S3_ENDPOINT is set (RustFS, MinIO), false for AWS. */
+    S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
   })
   .superRefine((env, ctx) => {
     const sender = env.OTP_SENDER ?? (env.NODE_ENV === 'production' ? 'apitxt' : 'console');
@@ -65,6 +79,8 @@ export interface AppConfig {
   logLevel: z.infer<typeof envSchema>['LOG_LEVEL'];
   appVersion: string;
   webOrigins: string[];
+  /** No trailing slash, e.g. https://app.ninno.in */
+  appUrl: string;
   bodyLimit: string;
   rateLimitPerMinute: number;
   authRateLimitPerMinute: number;
@@ -83,6 +99,15 @@ export interface AppConfig {
       channel: 'sms' | 'whatsapp' | 'voice';
       templateId: string | undefined;
     };
+  };
+  storage: {
+    endpoint: string | undefined;
+    publicEndpoint: string | undefined;
+    region: string;
+    bucket: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    forcePathStyle: boolean;
   };
 }
 
@@ -121,6 +146,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     logLevel: e.LOG_LEVEL,
     appVersion: e.APP_VERSION,
     webOrigins: e.WEB_ORIGINS,
+    appUrl: (e.APP_URL ?? e.WEB_ORIGINS[0]).replace(/\/+$/, ''),
     bodyLimit: e.BODY_LIMIT,
     rateLimitPerMinute: e.RATE_LIMIT_PER_MINUTE,
     authRateLimitPerMinute: e.AUTH_RATE_LIMIT_PER_MINUTE,
@@ -138,6 +164,15 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
         channel: e.APITXT_CHANNEL,
         templateId: e.APITXT_TEMPLATE_ID,
       },
+    },
+    storage: {
+      endpoint: e.S3_ENDPOINT,
+      publicEndpoint: e.S3_PUBLIC_ENDPOINT ?? e.S3_ENDPOINT,
+      region: e.S3_REGION,
+      bucket: e.S3_BUCKET,
+      accessKeyId: e.S3_ACCESS_KEY_ID,
+      secretAccessKey: e.S3_SECRET_ACCESS_KEY,
+      forcePathStyle: (e.S3_FORCE_PATH_STYLE ?? String(e.S3_ENDPOINT !== undefined)) === 'true',
     },
   };
 }

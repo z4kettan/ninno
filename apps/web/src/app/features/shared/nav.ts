@@ -8,6 +8,8 @@ export interface NavItem {
   link: string;
   /** Match the link exactly (for area roots like "/admin"). */
   exact?: boolean;
+  /** A count to show next to the label (e.g. applications waiting); hidden when 0. */
+  badge?: number;
 }
 
 /**
@@ -35,6 +37,9 @@ export interface NavItem {
         >
           <nn-icon [name]="item.icon" />
           {{ item.label }}
+          @if (item.badge) {
+            <span class="sr-only">({{ item.badge }})</span>
+          }
         </a>
       }
       @if (moreLabel()) {
@@ -44,8 +49,20 @@ export interface NavItem {
           aria-haspopup="dialog"
           (click)="more.emit()"
         >
-          <nn-icon name="more" />
+          <span class="relative">
+            <nn-icon name="more" />
+            @if (moreBadge()) {
+              <span
+                class="absolute -top-1 -right-2.5 min-w-4 rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-on-accent num"
+                aria-hidden="true"
+                >{{ moreBadge() }}</span
+              >
+            }
+          </span>
           {{ moreLabel() }}
+          @if (moreBadge()) {
+            <span class="sr-only">({{ moreBadge() }})</span>
+          }
         </button>
       }
     </nav>
@@ -56,5 +73,7 @@ export class NnTabBar {
   readonly items = input.required<NavItem[]>();
   readonly label = input('Main');
   readonly moreLabel = input<string | null>(null);
+  /** Sum of the badges hidden behind "More". */
+  readonly moreBadge = input(0);
   readonly more = output<void>();
 }

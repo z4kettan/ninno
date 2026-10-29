@@ -65,8 +65,25 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
+      # S3-compatible storage; each test run creates and deletes its own ninno-test-<ts>-<pid> bucket.
+      s3:
+        image: rustfs/rustfs:1.0.4
+        env:
+          RUSTFS_ACCESS_KEY: ninno
+          RUSTFS_SECRET_KEY: ninno-ci-secret
+          RUSTFS_ADDRESS: ':9000'
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -fsS http://localhost:9000/health"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     env:
       DATABASE_URL_TEST: postgresql://ninno:ninno@localhost:5432/ninno_test?schema=public
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY_ID: ninno
+      S3_SECRET_ACCESS_KEY: ninno-ci-secret
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

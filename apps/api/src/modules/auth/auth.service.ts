@@ -58,22 +58,7 @@ export class AuthService {
     const user = await this.findActiveUser(phone);
 
     if (result === 'ok' && user) {
-      const refresh = await this.tokens.startSession(user.id, meta);
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: this.clock.now() },
-      });
-      const me = await this.me(user.id);
-      await this.audit.log({
-        action: 'auth.login',
-        entity: 'user',
-        entityId: user.id,
-        actorUserId: user.id,
-        organizationId: me.memberships[0]?.organizationId,
-        ip: meta.ip,
-        metadata: { phone },
-      });
-      return { session: this.session(user.id, me), refresh };
+      return this.completeSignIn(user.id, phone, meta);
     }
 
     const locked = result === 'locked';
@@ -92,6 +77,31 @@ export class AuthService {
           'Too many wrong attempts. Request a new code.',
         )
       : new AppException(ErrorCode.OtpInvalid, HttpStatus.UNAUTHORIZED, OTP_INVALID_MESSAGE);
+  }
+
+  /** Starts a session for a user whose phone was just verified (login or signup). */
+  async completeSignIn(
+    userId: string,
+    phone: string,
+    meta: RequestMeta,
+    via: 'login' | 'signup' = 'login',
+  ): Promise<LoginResult> {
+    const refresh = await this.tokens.startSession(userId, meta);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: this.clock.now() },
+    });
+    const me = await this.me(userId);
+    await this.audit.log({
+      action: 'auth.login',
+      entity: 'user',
+      entityId: userId,
+      actorUserId: userId,
+      organizationId: me.memberships[0]?.organizationId,
+      ip: meta.ip,
+      metadata: { phone, via },
+    });
+    return { session: this.session(userId, me), refresh };
   }
 
   async refresh(refreshToken: string | undefined, meta: RequestMeta): Promise<LoginResult> {

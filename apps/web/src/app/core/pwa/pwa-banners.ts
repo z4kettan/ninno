@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
 import { NnButton, NnIcon, NnMark } from '@ninno/ui';
+import { filter, map } from 'rxjs';
 import { AppUpdateService, InstallPromptService, NetworkService } from './pwa.services';
 
 /** "A new version of Ninno is ready": never reloads by itself while someone is working. */
@@ -30,9 +33,9 @@ export class UpdateBanner {
   selector: 'nn-install-banner',
   imports: [NnButton, NnIcon, NnMark],
   template: `
-    @if (install.mode(); as mode) {
+    @if (mode(); as mode) {
       <aside
-        class="fixed inset-x-4 bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md rounded-card border border-border bg-surface p-4 shadow-[0_8px_24px_rgb(0_0_0/0.14)]"
+        class="fixed inset-x-4 bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md rounded-card border border-border bg-surface p-4 shadow-[0_4px_12px_rgb(0_0_0/0.08)]"
         aria-labelledby="install-title"
       >
         <div class="flex items-start gap-3">
@@ -78,6 +81,18 @@ export class UpdateBanner {
 })
 export class InstallBanner {
   protected readonly install = inject(InstallPromptService);
+  private readonly router = inject(Router);
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
+  /** Not while someone who just scanned a hostel's QR code is filling in the join form. */
+  protected readonly mode = computed(() =>
+    this.url().startsWith('/join/') ? null : this.install.mode(),
+  );
 }
 
 /** Shown over the app when the device is offline; the app shell itself loads from the cache. */

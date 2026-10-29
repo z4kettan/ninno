@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ErrorCode } from '@ninno/contracts';
 import { type Clock, InjectClock } from '../../../common/clock';
 import { AppException } from '../../../common/errors/app.exception';
+import type { RequestMeta } from '../../../common/http/request-meta';
 import { InjectConfig } from '../../../config/config.module';
 import type { AppConfig } from '../../../config/env.schema';
 import { PrismaService } from '../../../database/prisma.service';
@@ -15,10 +16,7 @@ export const SESSION_RULES = {
   refreshTtlMs: 30 * 24 * 60 * 60_000,
 } as const;
 
-export interface RequestMeta {
-  ip?: string | null;
-  userAgent?: string | null;
-}
+export type { RequestMeta } from '../../../common/http/request-meta';
 
 export interface IssuedRefreshToken {
   token: string;

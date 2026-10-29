@@ -8,6 +8,9 @@ export const TEST_ENV = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
   JWT_ACCESS_SECRET: 'test-access-secret-0123456789abcdef',
   OTP_PEPPER: 'test-otp-pepper-0123456789abcdefghij',
+  S3_BUCKET: 'ninno-test',
+  S3_ACCESS_KEY_ID: 'test-key',
+  S3_SECRET_ACCESS_KEY: 'test-secret',
 } as const;
 
 export function testConfig(overrides: Record<string, string> = {}): AppConfig {

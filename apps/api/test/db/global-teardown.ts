@@ -1,8 +1,26 @@
 import { Client } from 'pg';
-import { databaseName, RUN_DATABASE_ENV, RUN_DATABASE_PATTERN, testAdminUrl } from './env';
+import {
+  databaseName,
+  RUN_BUCKET_ENV,
+  RUN_DATABASE_ENV,
+  RUN_DATABASE_PATTERN,
+  testAdminUrl,
+  testStorageEnv,
+} from './env';
+import { dropRunBucket, storageAdmin } from './test-storage';
 
-/** Drops only the throwaway database this run created. */
+/** Drops only the throwaway database and bucket this run created. */
 export default async function globalTeardown(): Promise<void> {
+  const bucket = process.env[RUN_BUCKET_ENV];
+  if (bucket) {
+    const storage = storageAdmin(testStorageEnv(bucket));
+    try {
+      await dropRunBucket(storage, bucket);
+    } finally {
+      storage.destroy();
+    }
+  }
+
   const url = process.env[RUN_DATABASE_ENV];
   if (!url) {
     return;

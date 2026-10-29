@@ -38,6 +38,12 @@ export function isValidIndianPhone(input: string): boolean {
   return MOBILE_PATTERN.test(nationalDigits(input));
 }
 
+/** For display: "+919876543210" or "98765 43210" → "+91 98765 43210". */
+export function formatIndianPhone(phone: string): string {
+  const digits = nationalDigits(phone);
+  return MOBILE_PATTERN.test(digits) ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : phone;
+}
+
 /** Masked for display and logs: "+919876543210" → "+91 ••••••3210". */
 export function maskPhone(phone: string): string {
   const digits = nationalDigits(phone);

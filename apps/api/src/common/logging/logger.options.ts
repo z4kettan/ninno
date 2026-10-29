@@ -24,6 +24,7 @@ const SENSITIVE_KEYS = [
 export const REDACT_PATHS = [
   'req.headers.authorization',
   'req.headers.cookie',
+  'req.headers["x-draft-token"]',
   'res.headers["set-cookie"]',
   ...SENSITIVE_KEYS.flatMap((key) => [key, `*.${key}`, `*.*.${key}`]),
 ];

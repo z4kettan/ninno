@@ -64,7 +64,7 @@ Everyone (owners, staff and residents) logs in with their mobile number and a 6-
 - **Locally**, `OTP_SENDER=console` prints the code in the API log instead of sending an SMS:
   `[dev] OTP for +91 ••••••0002 is 520648`
 - **Real SMS** goes through [apitxt](https://apitxt.com). Set `OTP_SENDER=apitxt` and `APITXT_AUTH_KEY` in `.env`, never in git. Production refuses to start without them, and Indian production SMS also needs a DLT-approved `APITXT_TEMPLATE_ID`.
-- Only existing accounts get a code. Unknown numbers get the same reply but no SMS. Staff accounts come from the seed for now; residents are created when they submit the onboarding form (Phase 2).
+- Login codes go only to existing accounts. Unknown numbers get the same reply but no SMS. Staff accounts come from the seed for now; residents sign up through the join form (below), which sends its own code to any valid number.
 
 **In the app:** run `pnpm dev`, open http://localhost:4300, enter `90000 00002` (the seeded owner, or your `SEED_OWNER_PHONE`), and type the code from the API log. Owners, managers and staff land on `/admin`, residents on `/home`. The session survives reloads through the refresh cookie. The access token lives only in memory.
 
@@ -82,10 +82,31 @@ curl -b jar.txt -X POST localhost:3000/api/v1/auth/logout
 
 Code rules: valid for 5 minutes, single use, locked after 5 wrong tries, resend after 30 s, at most 5 SMS per hour per number. API routes require a token unless marked `@Public()`. The acting organisation always comes from the user's memberships (`X-Organization-Id` picks one when they have several), and `@Roles(...)` gates actions.
 
+## Resident onboarding (QR code)
+
+New residents register from their own phone by scanning the hostel's QR code. Submitting the form, confirmed by an SMS code, is their signup; staff then approve them into a bed.
+
+**Try it locally** (with `pnpm infra:up` and `pnpm dev` running):
+
+1. Sign in as the owner (`90000 00002`) and open **Onboarding QR** (`/admin/onboarding`). The first visit creates the hostel's join link. "Print poster" prints an A4 "Scan to join" page; "Make a new QR code" switches the old one off.
+2. Open the link it shows (`http://localhost:4300/join/<token>`) in another browser profile or a private window, and fill in the six steps. Any JPEG or PNG works for the selfie and ID; Aadhaar `2341 2341 2346` passes the checksum. On "Verify and submit", read the code from the API log (`[dev] OTP for +91 ••••••XXXX is …`). You land on the resident home, "Waiting for approval".
+3. Back as the owner, open **Approvals**, check the details and ID, choose a bed and check-in date, and approve. The resident's home now shows their room and bed.
+
+To test with a real phone on your Wi-Fi, set `APP_URL=http://<your-PC-LAN-IP>:4300` (the QR code uses it) and `S3_PUBLIC_ENDPOINT=http://<your-PC-LAN-IP>:9000` (the phone uploads there), add that web origin to `WEB_ORIGINS`, and run `pnpm storage:cors`.
+
+How it is kept safe:
+
+- **Uploads:** photos go from the phone straight to the private bucket through 10-minute signed URLs pinned to the file's type and size (5 MB at most); phones shrink images to about 1 MB first. Before signup, a 24-hour draft token allows only uploading to and submitting that one form.
+- **On submit,** the API checks each file's real type from its first bytes, re-encodes images (removing EXIF and GPS, at most 2560px) and watermarks IDs "For <hostel> KYC only". Uploads of forms never submitted are deleted daily at 03:30 IST.
+- **ID numbers:** Aadhaar numbers are checked (Verhoeff) on the phone and the server, and only `XXXX-XXXX-1234` is stored; other IDs keep their last 4 characters.
+- **Viewing:** staff see the selfie and ID through 5-minute signed links, and every view is written to the audit log (`photo.viewed`, `document.viewed`).
+- **Storage CORS:** browsers need a CORS rule on the bucket to upload directly. `pnpm infra:up` sets it from `WEB_ORIGINS`; run `pnpm storage:cors` after changing origins, and once for the production bucket.
+- **Consent:** the text residents accept is versioned (`CONSENT_V1` in `libs/shared/contracts`) and still a draft for the owner to review before the pilot.
+
 ## The web app
 
 - **Design:** the design-taste-frontend "accent-ladder" style, with DM Sans (self-hosted, including the `latin-ext` subset that carries ₹) and one hue, Backwater green `#0f7a5c`, used only on small marks. All tokens live in [libs/web/ui/src/styles/tokens.css](libs/web/ui/src/styles/tokens.css), and dark mode follows the device.
-- **Components:** shared components (`@ninno/ui`) are in [libs/web/ui](libs/web/ui): button, phone field, OTP input, card, empty state, skeleton, toast, sheet, and the `inr`/`istDate` pipes.
+- **Components:** shared components (`@ninno/ui`) are in [libs/web/ui](libs/web/ui): button, phone field, OTP input, form field and input, choice cards, photo tile, step progress, pill, card, empty state, skeleton, toast, sheet, and the `inr`/`istDate` pipes.
 - **PWA:** the production build is installable ("Add to home screen"). The service worker caches only the app shell and static files, never API responses. PWA icons are rendered from the mark with `node tools/render-icons.mjs`.
 - **e2e:** `pnpm exec nx run web-e2e:e2e` runs Playwright against the production build at 360×740 in your installed Chrome. The API is mocked, so no backend is needed. It also checks Chrome's installability and that the service worker never caches API responses.
 
