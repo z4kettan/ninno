@@ -66,7 +66,9 @@ Everyone (owners, staff and residents) logs in with their mobile number and a 6-
 - **Real SMS** goes through [apitxt](https://apitxt.com). Set `OTP_SENDER=apitxt` and `APITXT_AUTH_KEY` in `.env`, never in git. Production refuses to start without them, and Indian production SMS also needs a DLT-approved `APITXT_TEMPLATE_ID`.
 - Only existing accounts get a code. Unknown numbers get the same reply but no SMS. Staff accounts come from the seed for now; residents are created when they submit the onboarding form (Phase 2).
 
-Try it with curl against `pnpm dev` (the seeded owner is `+919000000002`, or your `SEED_OWNER_PHONE`):
+**In the app:** run `pnpm dev`, open http://localhost:4300, enter `90000 00002` (the seeded owner, or your `SEED_OWNER_PHONE`), and type the code from the API log. Owners, managers and staff land on `/admin`, residents on `/home`. The session survives reloads through the refresh cookie. The access token lives only in memory.
+
+Or with curl:
 
 ```sh
 curl -X POST localhost:3000/api/v1/auth/otp -H 'content-type: application/json' -d '{"phone":"90000 00002"}'
@@ -79,6 +81,13 @@ curl -b jar.txt -X POST localhost:3000/api/v1/auth/logout
 ```
 
 Code rules: valid for 5 minutes, single use, locked after 5 wrong tries, resend after 30 s, at most 5 SMS per hour per number. API routes require a token unless marked `@Public()`. The acting organisation always comes from the user's memberships (`X-Organization-Id` picks one when they have several), and `@Roles(...)` gates actions.
+
+## The web app
+
+- **Design:** the design-taste-frontend "accent-ladder" style, with DM Sans (self-hosted, including the `latin-ext` subset that carries ₹) and one hue, Backwater green `#0f7a5c`, used only on small marks. All tokens live in [libs/web/ui/src/styles/tokens.css](libs/web/ui/src/styles/tokens.css), and dark mode follows the device.
+- **Components:** shared components (`@ninno/ui`) are in [libs/web/ui](libs/web/ui): button, phone field, OTP input, card, empty state, skeleton, toast, sheet, and the `inr`/`istDate` pipes.
+- **PWA:** the production build is installable ("Add to home screen"). The service worker caches only the app shell and static files, never API responses. PWA icons are rendered from the mark with `node tools/render-icons.mjs`.
+- **e2e:** `pnpm exec nx run web-e2e:e2e` runs Playwright against the production build at 360×740 in your installed Chrome. The API is mocked, so no backend is needed. It also checks Chrome's installability and that the service worker never caches API responses.
 
 ## Everyday commands
 

@@ -28,15 +28,34 @@ export const REDACT_PATHS = [
   ...SENSITIVE_KEYS.flatMap((key) => [key, `*.${key}`, `*.*.${key}`]),
 ];
 
+/** Development: one short line per request, so lines that matter (like the dev OTP) stand out. */
+const devSerializers = {
+  req: (req: { id?: unknown; method?: string; url?: string }) => ({
+    id: req.id,
+    method: req.method,
+    url: req.url,
+  }),
+  res: (res: { statusCode?: number }) => ({ statusCode: res.statusCode }),
+};
+
 export function buildLoggerOptions(config: AppConfig): Params {
+  const development = config.nodeEnv === 'development';
   return {
     pinoHttp: {
       level: config.logLevel,
+      // Log lines written during a request carry its id, not the whole request again.
+      quietReqLogger: true,
       // The request id middleware has already set req.id.
       genReqId: (req: IncomingMessage) => req.id,
       redact: { paths: REDACT_PATHS, censor: '[REDACTED]' },
       autoLogging: { ignore: (req) => req.url === '/health' },
-      transport: config.nodeEnv === 'development' ? { target: 'pino-pretty' } : undefined,
+      serializers: development ? devSerializers : undefined,
+      transport: development
+        ? {
+            target: 'pino-pretty',
+            options: { singleLine: true, translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' },
+          }
+        : undefined,
     },
   };
 }

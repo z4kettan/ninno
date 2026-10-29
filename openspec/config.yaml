@@ -20,6 +20,10 @@ context: |
   Decisions made with the owner (deviations from the source spec):
   - UI base is Angular CDK + Tailwind with custom components in libs/web/ui, not Angular Material.
   - Frontend visual design follows the design-taste-frontend skill (no templated "AI slop" look).
+    Dealt app style (2026-10-29, seed 346400820): accent-ladder, DM Sans, open-plane shell, white
+    cards on #f9fafb, no shadows/gradients. Owner chose the hue "Backwater green": accent #0f7a5c,
+    soft #effaf5, track #cdeee0, ink #0b4a38. The hue goes only on small marks (primary button,
+    active tab, badges, progress tracks). Signature element: the resident's rent cycle strip.
   - Pilot hostel seed uses placeholder data in an editable YAML until real §11 values arrive.
   Target devices: cheap Android phones on slow 3G, 360px width, 44px tap targets, WCAG AA.
 

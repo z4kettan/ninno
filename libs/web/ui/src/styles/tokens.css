@@ -1,0 +1,95 @@
+/*
+ * Ninno design tokens: the only place colours, type and spacing are defined.
+ * Style: design-taste-frontend "accent-ladder" (seed 346400820), hue "Backwater green" (owner's choice).
+ * The hue goes on small marks only (primary button, active tab, badges, progress tracks);
+ * its pale tints do the area work. No shadows at rest, no gradients.
+ * Contrast: every text pair below was computed at 4.5:1 or more; control borders at 3:1 or more.
+ */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --ground: #f9fafb;
+  --surface: #ffffff;
+  --raised: #f3f4f6;
+  --border: #e5e7eb;
+  --rule: #f2f2f2;
+  /* Input and control outlines: 3.18:1 on white (WCAG 1.4.11). */
+  --control: #8a919c;
+
+  /* Text */
+  --text: #111827;
+  --muted: #5f6672;
+
+  /* The one hue: Backwater green */
+  --accent: #0f7a5c;
+  --on-accent: #ffffff;
+  --accent-soft: #effaf5;
+  --accent-track: #cdeee0;
+  --accent-ink: #0b4a38;
+
+  /* Status (pale pill pairs) */
+  --positive: #247b50;
+  --negative: #c4242a;
+  --pill-positive-bg: #dcfce7;
+  --pill-positive-ink: #14532d;
+  --pill-negative-bg: #ffedea;
+  --pill-negative-ink: #831c1e;
+  --pill-warning-bg: #fffbeb;
+  --pill-warning-ink: #92400e;
+  --pill-neutral-bg: #f3f4f6;
+  --pill-neutral-ink: #374151;
+
+  /* Shape and rhythm */
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --tap: 44px;
+  --gap: 16px;
+  --gutter: 16px;
+
+  /* Type */
+  --font: 'DM Sans', system-ui, 'Segoe UI', sans-serif;
+  --fs-title: 24px;
+  --fs-section: 18px;
+  --fs-figure: 30px;
+  --fs-body: 16px;
+  --fs-ui: 14px;
+  --fs-small: 12px;
+
+  /* Motion: feedback only, never entrances */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --fast: 120ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --ground: #0b0c0d;
+    --surface: #151719;
+    --raised: #1d2023;
+    --border: #2a2d31;
+    --rule: #202326;
+    --control: #6b7280;
+
+    --text: #f3f4f6;
+    --muted: #a8aeb7;
+
+    --accent: #3fbf95;
+    --on-accent: #04241a;
+    --accent-soft: #10241d;
+    --accent-track: #1d4a3b;
+    --accent-ink: #a7e9d2;
+
+    --positive: #3fc07a;
+    --negative: #ff9b93;
+    --pill-positive-bg: #172a1d;
+    --pill-positive-ink: #7ee2a8;
+    --pill-negative-bg: #2c1a1a;
+    --pill-negative-ink: #ff9b93;
+    --pill-warning-bg: #2a2112;
+    --pill-warning-ink: #f5c27a;
+    --pill-neutral-bg: #1d2023;
+    --pill-neutral-ink: #d1d5db;
+  }
+}

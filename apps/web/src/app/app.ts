@@ -1,13 +1,18 @@
-import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { NnToastHost } from '@ninno/ui';
+import { InstallBanner, OfflineScreen, UpdateBanner } from './core/pwa/pwa-banners';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
   selector: 'nn-root',
-  templateUrl: './app.html',
-  styleUrl: './app.css',
+  imports: [RouterOutlet, NnToastHost, UpdateBanner, InstallBanner, OfflineScreen],
+  template: `
+    <nn-update-banner />
+    <router-outlet />
+    <nn-install-banner />
+    <nn-toast-host />
+    <nn-offline-screen />
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class App {
-  protected title = 'web';
-}
+export class App {}

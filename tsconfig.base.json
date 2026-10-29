@@ -21,7 +21,8 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@ninno/contracts": ["./libs/shared/contracts/src/index.ts"],
-      "@ninno/utils": ["./libs/shared/utils/src/index.ts"]
+      "@ninno/utils": ["./libs/shared/utils/src/index.ts"],
+      "@ninno/ui": ["./libs/web/ui/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

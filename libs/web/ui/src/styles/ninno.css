@@ -1,0 +1,95 @@
+/*
+ * Global styles for Ninno web apps. Import after `@import "tailwindcss";`.
+ */
+
+/* DM Sans, self-hosted. latin-ext carries the rupee sign (U+20B9); unicode-range means
+   the browser only downloads it when a ₹ appears. */
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import '@fontsource/dm-sans/latin-ext-400.css';
+@import '@fontsource/dm-sans/latin-ext-500.css';
+@import '@fontsource/dm-sans/latin-ext-600.css';
+@import '@fontsource/dm-sans/latin-ext-700.css';
+
+@import './tokens.css';
+
+/* CDK overlay structure (positioning, backdrop) for sheets and dialogs. */
+@import '@angular/cdk/overlay-prebuilt.css';
+
+/* Expose tokens to Tailwind utilities (bg-surface, text-muted, border-control, rounded-card…). */
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-border: var(--border);
+  --color-rule: var(--rule);
+  --color-control: var(--control);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-track: var(--accent-track);
+  --color-accent-ink: var(--accent-ink);
+  --color-negative: var(--negative);
+  --color-positive: var(--positive);
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+  --font-sans: var(--font);
+}
+
+@layer base {
+  html {
+    font-family: var(--font);
+    font-size: var(--fs-body);
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--ground);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--ground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Figures never jitter. */
+  .num,
+  input,
+  time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Bottom sheet (SheetService). Floats, so it may carry a shadow. */
+  .nn-sheet-panel .cdk-dialog-container {
+    display: block;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 16px 16px 0 0;
+    padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgb(0 0 0 / 0.18);
+    outline: none;
+  }
+
+  .nn-sheet-backdrop {
+    background: rgb(0 0 0 / 0.4);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+    }
+  }
+}

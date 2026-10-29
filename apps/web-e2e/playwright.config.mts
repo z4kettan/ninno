@@ -1,76 +1,39 @@
 import { defineConfig, devices } from '@playwright/test';
 import { nxE2EPreset } from '@nx/playwright/preset';
-import { getReadyUrl, workspaceRoot } from '@nx/devkit';
-
-const isCI = !!process.env['CI'];
-// For CI, you may want to set BASE_URL to the deployed application.
-// getReadyUrl moves the address to the port the dev server task reported.
-const baseURL = process.env['BASE_URL'] || getReadyUrl('http://localhost:4300');
+import { workspaceRoot } from '@nx/devkit';
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
+ * End-to-end tests run against the production build (so the service worker and manifest are
+ * the real ones), served on 4310 so they never collide with `pnpm dev` on 4300. The API is
+ * mocked at the network layer (see src/support/mock-api.ts); no backend is needed.
  */
-// import 'dotenv/config';
+// 127.0.0.1, not localhost: on Windows localhost can resolve to IPv6 (::1) intermittently.
+const baseURL = process.env['BASE_URL'] || 'http://127.0.0.1:4310';
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- *
- * Generated as a .mts file so Node forces ESM regardless of workspace
- * `type`. Playwright routes `.mts` through its ESM loader (dynamic import,
- * bypassing the pirates CJS-compile path), and Nx's native TS strip loads
- * `.mts` directly. Playwright's configLoader auto-discovers
- * `playwright.config.mts` via its extension list
- * (.ts/.js/.mts/.mjs/.cts/.cjs).
- */
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL,
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
   webServer: {
-    command: isCI ? 'pnpm exec nx run web:serve-static' : 'pnpm exec nx run web:serve',
-    url: getReadyUrl('http://localhost:4300'),
-    reuseExistingServer: true,
+    command: 'pnpm exec nx run web:serve-static',
+    url: baseURL,
+    reuseExistingServer: !process.env['CI'],
     cwd: workspaceRoot,
+    timeout: 300_000,
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      // The narrowest phone Ninno targets.
+      name: 'phone-360',
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 360, height: 740 },
+        // The installed Google Chrome (present on dev machines and GitHub runners), so no
+        // Playwright browser download is needed.
+        channel: 'chrome',
+      },
     },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    // Uncomment for mobile browsers support
-    /* {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    }, */
-
-    // Uncomment for branded browsers
-    /* {
-      name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
-    {
-      name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    } */
   ],
 });

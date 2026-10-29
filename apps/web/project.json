@@ -20,7 +20,8 @@
             "input": "apps/web/public"
           }
         ],
-        "styles": ["apps/web/src/styles.css"]
+        "styles": ["apps/web/src/styles.css"],
+        "polyfills": ["@angular/localize/init"]
       },
       "configurations": {
         "production": {
@@ -36,7 +37,8 @@
               "maximumError": "8kb"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "serviceWorker": "apps/web/ngsw-config.json"
         },
         "development": {
           "optimization": false,
@@ -81,9 +83,11 @@
       "executor": "@nx/web:file-server",
       "options": {
         "buildTarget": "web:build",
-        "port": 4300,
+        "port": 4310,
         "staticFilePath": "dist/apps/web/browser",
-        "spa": true
+        "spa": true,
+        "watch": false,
+        "host": "127.0.0.1"
       }
     },
     "typecheck": {

@@ -1,1 +1,5 @@
-/* You can add global styles to this file, and also import other style files */
+@import 'tailwindcss';
+@import '../../../libs/web/ui/src/styles/ninno.css';
+
+/* Tailwind scans the app automatically; the shared UI library lives outside it. */
+@source '../../../libs/web/ui/src';
